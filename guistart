@@ -1,0 +1,47 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+# Kill all active related processes completely
+pkill -9 -f 'xfce4|xfwm4|xfdesktop|xfce4-panel|dbus-daemon|dbus-launch|at-spi|termux-x11|Xwayland|gpg-agent|restoggle' 2>/dev/null || true
+sleep 1
+rm -rf "$TMPDIR/.X11-unix" "$TMPDIR/.X0-lock" /tmp/runtime-root 2>/dev/null || true
+
+# Disable Android Phantom Process Killer & Force 16:9 full screen resolution via ADB
+if command -v adb >/dev/null 2>&1; then
+    adb connect 127.0.0.1:5555 >/dev/null 2>&1 || true
+    adb -s 127.0.0.1:5555 shell "/system/bin/device_config set_sync_disabled_for_tests persistent; /system/bin/device_config put activity_manager max_phantom_processes 2147483647; /system/bin/settings put global settings_enable_monitor_phantom_procs false" >/dev/null 2>&1 || true
+    adb -s 127.0.0.1:5555 shell "wm size 1080x1920; wm density 360" >/dev/null 2>&1 || true
+fi
+
+# Start resolution watcher (forces 16:9 only while Termux:X11 is in the foreground)
+nohup ~/restoggle >/dev/null 2>&1 &
+
+# Set Termux:X11 to true fullscreen landscape 1920x1080 with mouse capture
+termux-x11-preference \
+    fullscreen:true \
+    hideCutout:true \
+    showAdditionalKbd:false \
+    forceOrientation:landscape \
+    displayResolutionMode:native \
+    displayResolutionCustom:1920x1080 \
+    pointerCapture:true \
+    displayStretch:true 2>/dev/null || true
+
+# Start X11 server
+termux-x11 :0 -ac >/dev/null 2>&1 &
+sleep 2
+
+# Launch Termux:X11
+am start -n com.termux.x11/.MainActivity >/dev/null 2>&1
+
+# Start Debian XFCE
+proot-distro login debian --shared-tmp -- bash -lc '
+export DISPLAY=:0
+export XDG_RUNTIME_DIR=/tmp/runtime-root
+mkdir -p "$XDG_RUNTIME_DIR"
+chmod 700 "$XDG_RUNTIME_DIR"
+dbus-launch --exit-with-session startxfce4
+'
+
+# Session ended - stop watcher and restore native phone resolution
+pkill -f restoggle 2>/dev/null || true
+adb -s 127.0.0.1:5555 shell "wm size reset; wm density reset" >/dev/null 2>&1 || true

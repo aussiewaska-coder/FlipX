@@ -1,0 +1,31 @@
+#!/data/data/com.termux/files/usr/bin/bash
+# restoggle - force 1080x1920 only while Termux:X11 is in the foreground;
+#             native phone resolution for everything else.
+ADB="adb -s 127.0.0.1:5555"
+state="x11"   # guistart already forced 16:9 before launching us
+
+while true; do
+    fg=$($ADB shell "dumpsys window displays | grep mCurrentFocus" 2>/dev/null)
+
+    # adb hiccup / disconnected: try to reconnect, don't touch resolution
+    if [ -z "$fg" ]; then
+        adb connect 127.0.0.1:5555 >/dev/null 2>&1
+        sleep 2
+        continue
+    fi
+
+    case "$fg" in
+        *com.termux.x11*) want="x11" ;;
+        *)                want="other" ;;
+    esac
+
+    if [ "$want" != "$state" ]; then
+        if [ "$want" = "x11" ]; then
+            $ADB shell "wm size 1080x1920; wm density 360" >/dev/null 2>&1
+        else
+            $ADB shell "wm size reset; wm density reset" >/dev/null 2>&1
+        fi
+        state="$want"
+    fi
+    sleep 1
+done
