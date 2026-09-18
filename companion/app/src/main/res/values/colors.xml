@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="flipx_bg">#0B1220</color>
-    <color name="flipx_card">#141D33</color>
-    <color name="flipx_tile">#1B2742</color>
+    <color name="flipx_bg">#05070F</color>
+    <color name="flipx_card">#0C1322</color>
+    <color name="flipx_tile">#111A30</color>
     <color name="flipx_accent">#F5A524</color>
+    <color name="flipx_neon">#00F0FF</color>
+    <color name="flipx_pink">#FF2D78</color>
     <color name="flipx_text">#EAEFF7</color>
     <color name="flipx_muted">#8A94A6</color>
     <color name="flipx_green">#34D17B</color>
     <color name="flipx_red">#F0524F</color>
-    <color name="ic_launcher_background">#0B1220</color>
+    <color name="ic_launcher_background">#05070F</color>
 </resources>
