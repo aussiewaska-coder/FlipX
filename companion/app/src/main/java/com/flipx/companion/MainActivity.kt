@@ -231,6 +231,7 @@ class MainActivity : Activity() {
     }
 
     private fun refresh() {
+        if (!::dot.isInitialized) return
         val ok = Sh.granted()
         dot.text = if (ok) "\u25CF" else "\u25CB"
         dot.setTextColor(if (ok) 0xFF34D17B.toInt() else 0xFFF0524F.toInt())
