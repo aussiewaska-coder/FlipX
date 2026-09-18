@@ -1,15 +1,35 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# restoggle - force 1080x1920 only while Termux:X11 is in the foreground;
+# restoggle - force FLIPX_SIZE only while Termux:X11 is in the foreground;
 #             native phone resolution for everything else.
-ADB="adb -s 127.0.0.1:5555"
+# ADB target is auto-detected every loop (wireless port changes each restart).
+FLIPX_SIZE="${FLIPX_SIZE:-1080x1920}"
+FLIPX_DENSITY="${FLIPX_DENSITY:-190}"
+source "$HOME/adb_common.sh" 2>/dev/null || true
 state="x11"   # guistart already forced 16:9 before launching us
 
 while true; do
-    fg=$($ADB shell "dumpsys window displays | grep mCurrentFocus" 2>/dev/null)
+    if declare -F pick_adb_device >/dev/null 2>&1; then
+        pick_adb_device 2>/dev/null || true
+    else
+        ADB_TARGET=""
+        ADB_SHELL="adb shell"
+    fi
 
-    # adb hiccup / disconnected: try to reconnect, don't touch resolution
+    # adb down / disconnected: don't touch resolution, retry shortly
+    if [ -z "${ADB_TARGET:-}" ]; then
+        sleep 2
+        continue
+    fi
+
+    # External monitor connected: desktop mode owns the layout, stay out
+    if $ADB_SHELL dumpsys display 2>/dev/null | grep -q 'type=EXTERNAL[^}]*displayId='; then
+        sleep 5
+        continue
+    fi
+
+    fg=$($ADB_SHELL "dumpsys window displays | grep mCurrentFocus" 2>/dev/null)
+
     if [ -z "$fg" ]; then
-        adb connect 127.0.0.1:5555 >/dev/null 2>&1
         sleep 2
         continue
     fi
@@ -21,9 +41,12 @@ while true; do
 
     if [ "$want" != "$state" ]; then
         if [ "$want" = "x11" ]; then
-            $ADB shell "wm size 1080x1920; wm density 360" >/dev/null 2>&1
+            $ADB_SHELL "wm size $FLIPX_SIZE; wm density $FLIPX_DENSITY" >/dev/null 2>&1
         else
-            $ADB shell "wm size reset; wm density reset" >/dev/null 2>&1
+            for d in "" " -d 0" " -d 1" " -d 6"; do
+                $ADB_SHELL "wm size reset$d" >/dev/null 2>&1 || true
+                $ADB_SHELL "wm density reset$d" >/dev/null 2>&1 || true
+            done
         fi
         state="$want"
     fi

@@ -1,0 +1,35 @@
+#!/data/data/com.termux/files/usr/bin/bash
+# Desktop Mode - one tap: phone to FlipX layout + any connected external
+# monitor to 1920x1080. External display IDs change every replug, so they
+# are detected live instead of hardcoded.
+DESK_SIZE="${FLIPX_SIZE:-1080x1920}"
+DESK_DENSITY="${FLIPX_DENSITY:-190}"
+MON_SIZE="${FLIPX_MON_SIZE:-1920x1080}"
+MON_DENSITY="${FLIPX_MON_DENSITY:-190}"
+
+source "$HOME/adb_common.sh" 2>/dev/null || true
+if declare -F pick_adb_device >/dev/null 2>&1; then
+    pick_adb_device 2>/dev/null || true
+fi
+
+if [ -z "${ADB_TARGET:-}" ]; then
+    echo "No ADB device found. Enable Wireless debugging, then run: adb connect <phone-ip>:<port>"
+    exit 1
+fi
+
+# Phone (default display) to desktop layout
+$ADB_SHELL "wm size $DESK_SIZE; wm density $DESK_DENSITY" >/dev/null 2>&1 || true
+
+# Every live external display to full HD (best effort: the sink may cap modes)
+MON_DONE=""
+for id in $($ADB_SHELL dumpsys display 2>/dev/null | grep -o 'type=EXTERNAL[^}]*displayId=[0-9]*' | grep -o 'displayId=[0-9]*' | cut -d= -f2 | sort -u); do
+    $ADB_SHELL "wm size $MON_SIZE -d $id" >/dev/null 2>&1 || true
+    $ADB_SHELL "wm density $MON_DENSITY -d $id" >/dev/null 2>&1 || true
+    MON_DONE="$MON_DONE $id"
+done
+
+if [ -z "$MON_DONE" ]; then
+    echo "Desktop mode via $ADB_TARGET: phone $DESK_SIZE/$DESK_DENSITY, no external display seen."
+else
+    echo "Desktop mode via $ADB_TARGET: phone $DESK_SIZE/$DESK_DENSITY, monitor(s)$MON_DONE $MON_SIZE/$MON_DENSITY."
+fi

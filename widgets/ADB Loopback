@@ -1,0 +1,44 @@
+#!/data/data/com.termux/files/usr/bin/bash
+# ADB Loopback - one tap to (re)establish solid localhost ADB.
+# Per-boot floor (no root): toggle Wireless debugging ON once, tap this,
+# then the toggle can go back OFF - loopback keeps working with WiFi off.
+source "$HOME/adb_common.sh" 2>/dev/null || true
+
+if declare -F pick_adb_device >/dev/null 2>&1; then
+    pick_adb_device 2>/dev/null || true
+fi
+
+# Fast path: loopback already live
+if [ "${ADB_TARGET:-}" = "127.0.0.1:5555" ]; then
+    echo "Loopback ADB already live (127.0.0.1:5555)."
+    exit 0
+fi
+
+# Listener up but not connected?
+adb connect 127.0.0.1:5555 >/dev/null 2>&1 || true
+sleep 1
+pick_adb_device 2>/dev/null || true
+if [ "${ADB_TARGET:-}" = "127.0.0.1:5555" ]; then
+    echo "Loopback ADB live (127.0.0.1:5555). Wireless debugging can go OFF."
+    exit 0
+fi
+
+# Any wireless device connected? Arm its TCP listener, then go loopback.
+for dev in $(adb devices 2>/dev/null | awk '$2=="device" && $1!="127.0.0.1:5555" {print $1}'); do
+    adb -s "$dev" tcpip 5555 >/dev/null 2>&1 || true
+    sleep 3
+    adb connect 127.0.0.1:5555 >/dev/null 2>&1 || true
+    sleep 1
+    break
+done
+pick_adb_device 2>/dev/null || true
+if [ "${ADB_TARGET:-}" = "127.0.0.1:5555" ]; then
+    echo "Loopback ADB live (127.0.0.1:5555). Wireless debugging can go OFF."
+    exit 0
+fi
+
+echo "No ADB link. One manual step: Settings -> Developer options ->"
+echo "Wireless debugging ON, note IP:port, then run:"
+echo "  adb connect <ip>:<port>"
+echo "Then tap ADB Loopback again."
+exit 1

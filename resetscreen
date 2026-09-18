@@ -1,0 +1,18 @@
+#!/data/data/com.termux/files/usr/bin/bash
+# resetscreen - reset all displays to native, auto-detecting the ADB target.
+source "$HOME/adb_common.sh" 2>/dev/null || true
+if declare -F pick_adb_device >/dev/null 2>&1; then
+    pick_adb_device 2>/dev/null || true
+fi
+
+if [ -z "${ADB_TARGET:-}" ]; then
+    echo "No ADB device found. Enable Wireless debugging, then run: adb connect <phone-ip>:<port>"
+    exit 1
+fi
+
+for d in "" " -d 0" " -d 1" " -d 6"; do
+    $ADB_SHELL "wm size reset$d" >/dev/null 2>&1 || true
+    $ADB_SHELL "wm density reset$d" >/dev/null 2>&1 || true
+done
+$ADB_SHELL "settings put global policy_control null" >/dev/null 2>&1 || true
+echo "Screen restored to native via $ADB_TARGET."

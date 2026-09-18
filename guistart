@@ -5,11 +5,28 @@ pkill -9 -f 'xfce4|xfwm4|xfdesktop|xfce4-panel|dbus-daemon|dbus-launch|at-spi|te
 sleep 1
 rm -rf "$TMPDIR/.X11-unix" "$TMPDIR/.X0-lock" /tmp/runtime-root 2>/dev/null || true
 
+# FlipX defaults - kept identical to the Desktop Mode widget so Linux and
+# Android desktop mode share one layout (override with env if needed)
+FLIPX_SIZE="${FLIPX_SIZE:-1080x1920}"
+FLIPX_DENSITY="${FLIPX_DENSITY:-190}"
+
+# Auto-detect ADB target (wireless port changes every restart, never hardcode)
+source "$HOME/adb_common.sh" 2>/dev/null || true
+if declare -F pick_adb_device >/dev/null 2>&1; then
+    pick_adb_device 2>/dev/null || true
+fi
+
 # Disable Android Phantom Process Killer & Force 16:9 full screen resolution via ADB
-if command -v adb >/dev/null 2>&1; then
-    adb connect 127.0.0.1:5555 >/dev/null 2>&1 || true
-    adb -s 127.0.0.1:5555 shell "/system/bin/device_config set_sync_disabled_for_tests persistent; /system/bin/device_config put activity_manager max_phantom_processes 2147483647; /system/bin/settings put global settings_enable_monitor_phantom_procs false" >/dev/null 2>&1 || true
-    adb -s 127.0.0.1:5555 shell "wm size 1080x1920; wm density 360" >/dev/null 2>&1 || true
+if [ -n "${ADB_TARGET:-}" ]; then
+    $ADB_SHELL "/system/bin/device_config set_sync_disabled_for_tests persistent; /system/bin/device_config put activity_manager max_phantom_processes 2147483647; /system/bin/settings put global settings_enable_monitor_phantom_procs false" >/dev/null 2>&1 || true
+    $ADB_SHELL "wm size $FLIPX_SIZE; wm density $FLIPX_DENSITY" >/dev/null 2>&1 || true
+    # Any connected external monitor to full HD (IDs change every replug, detected live)
+    for mon in $($ADB_SHELL dumpsys display 2>/dev/null | grep -o 'type=EXTERNAL[^}]*displayId=[0-9]*' | grep -o 'displayId=[0-9]*' | cut -d= -f2 | sort -u); do
+        $ADB_SHELL "wm size ${FLIPX_MON_SIZE:-1920x1080} -d $mon" >/dev/null 2>&1 || true
+        $ADB_SHELL "wm density ${FLIPX_MON_DENSITY:-190} -d $mon" >/dev/null 2>&1 || true
+    done
+else
+    echo "WARNING: no ADB device found - resolution not forced (enable Wireless debugging, then adb connect <ip>:<port>)" >&2
 fi
 
 # Start resolution watcher (forces 16:9 only while Termux:X11 is in the foreground)
@@ -42,6 +59,7 @@ chmod 700 "$XDG_RUNTIME_DIR"
 dbus-launch --exit-with-session startxfce4
 '
 
-# Session ended - stop watcher and restore native phone resolution
+# Session ended - stop watcher, leave resolution alone (desktop mode respected).
+# Use the Reset Screen widget to go back to native phone resolution.
 pkill -f restoggle 2>/dev/null || true
-adb -s 127.0.0.1:5555 shell "wm size reset; wm density reset" >/dev/null 2>&1 || true
+echo "Desktop session ended - display layout left as-is."

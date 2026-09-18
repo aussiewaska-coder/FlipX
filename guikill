@@ -1,0 +1,21 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+echo "Stopping all Linux desktop processes..."
+pkill -9 -f 'xfce4|xfwm4|xfdesktop|xfce4-panel|dbus-daemon|dbus-launch|at-spi|termux-x11|Xwayland|gpg-agent' 2>/dev/null || true
+am broadcast -a com.termux.x11.ACTION_STOP -p com.termux.x11 >/dev/null 2>&1 || true
+
+sleep 1
+
+rm -rf "$TMPDIR/.X11-unix" "$TMPDIR/.X0-lock" /tmp/runtime-root 2>/dev/null || true
+
+# Display layout intentionally left alone: closing Linux respects desktop mode.
+# Use the Reset Screen widget to go back to native phone resolution.
+
+# Reset Termux:X11 orientation and keys bar back to normal phone mode
+termux-x11-preference \
+    forceOrientation:system \
+    showAdditionalKbd:true \
+    pointerCapture:false \
+    displayResolutionMode:native 2>/dev/null || true
+
+echo "Desktop stopped - display layout left as-is."

@@ -26,10 +26,10 @@ front, and a giant trackpad already in your hand.
   own screen becomes a large, precise trackpad for the desktop (Termux:X11
   Preferences → Touch Mode → Trackpad). Monitor, keyboard, mouse, trackpad — a
   full workstation from one phone and one cable.
-- **Plays nice with Android.** The phone's resolution switches to 16:9 only
-  while the desktop is in the foreground; hop to any Android app and the phone
-  snaps back to native. Log out and everything is restored — the phone is never
-  left in a weird state.
+- **Plays nice with Android.** One shared desktop layout (`1080x1920` phone,
+  `1920x1080` external) for Android and Linux alike — plug in, tap Desktop
+  Mode, run Linux. Closing Linux leaves the layout alone; Reset Screen is the
+  only thing that returns the phone to native.
 
 ## Compatibility
 
@@ -44,27 +44,54 @@ The core (Termux + Termux:X11 + proot Debian) runs anywhere. The Flip-specific
 polish — clamshell cover screen, tall-screen handling — is where FlipX shines.
 
 Feature requirements: cover screen needs Good Lock → MultiStar; external
-monitor needs USB-C video out (or Smart View wireless); the automatic
-resolution switching needs wireless ADB to localhost.
+monitor needs USB-C video out (or Smart View wireless); the ADB-backed scripts
+prefer loopback (`127.0.0.1:5555` via `adb tcpip`) so they keep working with
+WiFi off — see Plug-n-go below.
 
 ## Quick start
 
 Prerequisites (Termux side): Termux + the Termux:X11 app, `proot-distro` with a
 Debian container running XFCE, the `android-tools` package
-(`pkg install android-tools`) with **Wireless debugging** enabled.
+(`pkg install android-tools`) with **Wireless debugging** enabled (once per
+boot — see Loopback).
 
 ```bash
-cp guistart restoggle ~/
-chmod +x ~/guistart ~/restoggle
+cp guistart restoggle adb_common.sh resetscreen guikill ~/
+cp widgets/* ~/.shortcuts/   # needs the Termux:Widget app
+chmod +x ~/guistart ~/restoggle ~/adb_common.sh ~/resetscreen ~/guikill ~/.shortcuts/*
 ./guistart
 ```
+
+## Plug-n-go
+
+1. Plug in the monitor. Tap the **Desktop Mode** widget: phone to `1080x1920`,
+   every live external display to `1920x1080` (IDs are detected live — they
+   change every replug).
+2. Tap **Linux Desktop** (`guistart`): same shared layout, no conflicts.
+3. **Kill Linux** (`guikill`) leaves the layout alone. **Reset Screen** is the
+   only reset. Layout defaults to density 190, tunable via env, e.g.
+   `FLIPX_DENSITY=360 ~/guistart`.
+
+## Loopback ADB (solid, works with WiFi off)
+
+Per boot: Wireless debugging ON once (needs any WiFi association — even a
+no-internet dummy AP), tap the **ADB Loopback** widget: it arms
+`adb tcpip 5555` and lands on `127.0.0.1:5555`. The toggle and WiFi can then go
+off — everything keeps working until reboot. (No root can persist the listener;
+`persist.adb.tcp.port` is refused on production builds.)
 
 ## What's in here
 
 | File | What it does |
 |---|---|
-| `guistart` | One-shot desktop launcher: kills stale sessions, disables Android's phantom-process killer, forces 16:9 while the desktop runs, applies Termux:X11 prefs, starts the X server + XFCE, and restores native phone resolution on exit |
-| `restoggle` | Background watcher: forces `1080x1920` only while Termux:X11 is in the foreground, resets to native for every other Android app |
+| `guistart` | One-shot desktop launcher: kills stale sessions, disables Android's phantom-process killer, applies the shared desktop layout to phone + live external displays, applies Termux:X11 prefs, starts the X server + XFCE. Leaves the layout alone on exit |
+| `restoggle` | Background watcher: on phone-only use it forces the desktop layout while Termux:X11 is in the foreground and resets to native elsewhere; stands down completely while an external display is connected |
+| `adb_common.sh` | Shared ADB target auto-detection (prefers loopback, never hardcodes ports — wireless ports rotate every restart) |
+| `resetscreen` | One-shot reset of all displays to native (also a Termux widget) |
+| `guikill` | Stops the desktop without touching the display layout |
+| `widgets/Desktop Mode` | One-tap desktop layout for phone + monitor |
+| `widgets/Reset Screen` | One-tap return to native |
+| `widgets/ADB Loopback` | One-tap solid localhost ADB |
 | `debian/google-chrome.desktop` | Chrome launcher with the flags proot needs (`--no-sandbox --test-type --disable-gpu`) |
 
 ## How it works
@@ -72,11 +99,11 @@ chmod +x ~/guistart ~/restoggle
 - `guistart` sets `displayResolutionMode:native`, so the X server adopts whatever
   screen it's on: full widescreen when open, proper square 720×748 on the cover
   screen when closed — never squashed.
-- While the desktop runs, `wm size 1080x1920` keeps the X session at an exact
-  1920×1080. `restoggle` watches the foreground app and drops the phone back to
-  native resolution whenever you switch to a regular Android app.
-- Logging out of XFCE stops the watcher and resets the resolution, so the phone
-  is never left in a forced mode.
+- One shared layout (`1080x1920` phone at density 190, `1920x1080` external)
+  serves Android and Linux, so nothing fights: `restoggle` only acts when no
+  external display is present, and exiting Linux never resets.
+- External display IDs increment every replug (6 → 13 → 15 → 16 observed), so
+  all scripts detect them live via `dumpsys display` instead of hardcoding.
 
 ## Extras
 
