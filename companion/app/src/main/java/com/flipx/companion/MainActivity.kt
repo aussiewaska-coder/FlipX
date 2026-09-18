@@ -156,6 +156,10 @@ class MainActivity : Activity() {
         }.also { addView(it) }
     }
 
+    private fun GridLayout.add(b: Button, fn: () -> Unit) {
+        b.setOnClickListener { fn() }
+    }
+
     private fun bg(fn: () -> Unit) {
         Thread {
             fn()
