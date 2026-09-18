@@ -85,8 +85,8 @@ class MainActivity : Activity() {
             background = glowBox(CARD, NEON, 26f)
             elevation = 10f
         }
-        dot = TextView(this).apply { textSize = 22f; setPadding(0, 0, 24, 0); gravity = Gravity.CENTER_VERTICAL }
-        statusBody = TextView(this).apply { textSize = 13f; setTextColor(TEXT) }
+        dot = TextView(this).apply { textSize = 18f; setPadding(0, 0, 24, 0); gravity = Gravity.CENTER_VERTICAL }
+        statusBody = TextView(this).apply { textSize = 12f; setTextColor(TEXT) }
         card.addView(dot)
         card.addView(statusBody)
         root.addView(card)
