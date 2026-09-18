@@ -17,19 +17,15 @@ object TermuxCtl {
 
     fun run(context: Context, script: String, background: Boolean): Boolean {
         return try {
+            // RUN_COMMAND always goes to RunCommandService: with BACKGROUND=false
+            // it opens the session in the Termux UI itself. (Termux setting
+            // "Allow external apps" must be ON or this throws SecurityException.)
             val intent = Intent(ACTION_RUN).apply {
                 setClassName(TERMUX_PKG, "$TERMUX_PKG.app.RunCommandService")
                 putExtra(EXTRA_PATH, script)
                 putExtra(EXTRA_BG, background)
             }
-            if (background) {
-                context.startService(intent)
-            } else {
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                // Foreground sessions open via the activity alias.
-                intent.setClassName(TERMUX_PKG, "$TERMUX_PKG.app.TermuxActivity")
-                context.startActivity(intent)
-            }
+            context.startService(intent)
             true
         } catch (_: Throwable) {
             false

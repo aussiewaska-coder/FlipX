@@ -65,8 +65,8 @@ class MainActivity : Activity() {
             setPadding(32, 28, 32, 28)
             setBackgroundColor(0xFF141D33.toInt())
         }
-        dot = TextView(this).apply { textSize = 30f; setPadding(0, 0, 24, 0) }
-        statusBody = TextView(this).apply { textSize = 14f; setTextColor(0xFFEAEFF7.toInt()) }
+        dot = TextView(this).apply { textSize = 22f; setPadding(0, 0, 24, 0); gravity = Gravity.CENTER_VERTICAL }
+        statusBody = TextView(this).apply { textSize = 13f; setTextColor(0xFFEAEFF7.toInt()) }
         card.addView(dot)
         card.addView(statusBody)
         root.addView(card)
