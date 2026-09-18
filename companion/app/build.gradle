@@ -1,0 +1,33 @@
+plugins {
+    id("com.android.application")
+}
+
+android {
+    namespace = "com.flipx.companion"
+    compileSdk = 34
+
+    defaultConfig {
+        applicationId = "com.flipx.companion"
+        minSdk = 26
+        targetSdk = 34
+        versionCode = 1
+        versionName = "1.0"
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix = ".debug"
+        }
+        release {
+            // No release signing configured; CI ships debug APKs.
+        }
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation("dev.rikka.shizuku:api:13.1.5")
+}
