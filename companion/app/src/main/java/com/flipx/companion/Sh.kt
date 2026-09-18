@@ -1,10 +1,16 @@
 package com.flipx.companion
 
+import android.content.ComponentName
+import android.content.Context
+import android.content.ServiceConnection
+import android.os.IBinder
 import rikka.shizuku.Shizuku
-import java.io.BufferedReader
-import java.io.InputStreamReader
+import rikka.shizuku.UserServiceArgs
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
-/** Shared desktop layout + thin wrapper around Shizuku shell. */
+/** Shared desktop layout. Commands execute in a Shizuku user service (shell UID). */
 object Sh {
     const val PHONE_SIZE = "1080x1920"
     const val PHONE_DENSITY = "190"
@@ -19,44 +25,69 @@ object Sh {
         }
     }
 
-    /** Run a command as Shizuku shell. Returns exit code, -1 if Shizuku unavailable. */
-    fun run(vararg args: String): Int {
+    /** Run a command with shell privileges. Blocking — call off the main thread. */
+    fun run(context: Context, vararg args: String): Int {
         if (!granted()) return -1
-        return try {
-            val proc = Shizuku.newProcess(args, null, null)
-            // Drain output so small commands never block.
-            val drain: (java.io.InputStream) -> Unit = { ins ->
+        val latch = CountDownLatch(1)
+        val svc = AtomicReference<IFlipService?>()
+        val conn = object : ServiceConnection {
+            override fun onServiceConnected(name: ComponentName, binder: IBinder) {
                 try {
-                    BufferedReader(InputStreamReader(ins)).forEachLine { }
+                    svc.set(IFlipService.Stub.asInterface(binder))
                 } catch (_: Throwable) {
                 }
+                latch.countDown()
             }
-            val t1 = Thread { drain(proc.inputStream) }
-            val t2 = Thread { drain(proc.errorStream) }
-            t1.start()
-            t2.start()
-            val code = proc.waitFor()
-            t1.join(2000)
-            t2.join(2000)
-            code
+
+            override fun onServiceDisconnected(name: ComponentName) {
+                latch.countDown()
+            }
+
+            override fun onBindingDied(name: ComponentName) {
+                latch.countDown()
+            }
+        }
+        val uargs = UserServiceArgs(ComponentName(context.packageName, FlipService::class.java.name))
+            .daemon(false)
+            .processNameSuffix("flipx")
+            .debuggable(BuildConfig.DEBUG)
+            .versionCode(BuildConfig.VERSION_CODE)
+        try {
+            Shizuku.bindUserService(uargs, conn)
+        } catch (_: Throwable) {
+            return -1
+        }
+        return try {
+            if (!latch.await(15, TimeUnit.SECONDS)) return -1
+            val s = svc.get() ?: return -1
+            try {
+                s.runWm(args)
+            } catch (_: Throwable) {
+                -1
+            }
         } catch (_: Throwable) {
             -1
+        } finally {
+            try {
+                Shizuku.unbindUserService(conn)
+            } catch (_: Throwable) {
+            }
         }
     }
 
-    fun applyDesktop(externalIds: List<Int>): Int {
-        var code = run("wm", "size", PHONE_SIZE)
+    fun applyDesktop(context: Context, externalIds: List<Int>): Int {
+        var code = run(context, "wm", "size", PHONE_SIZE)
         if (code != 0) return code
-        code = run("wm", "density", PHONE_DENSITY)
+        code = run(context, "wm", "density", PHONE_DENSITY)
         if (code != 0) return code
         for (id in externalIds) {
-            run("wm", "size", MON_SIZE, "-d", id.toString())
-            run("wm", "density", MON_DENSITY, "-d", id.toString())
+            run(context, "wm", "size", MON_SIZE, "-d", id.toString())
+            run(context, "wm", "density", MON_DENSITY, "-d", id.toString())
         }
         return 0
     }
 
-    fun resetAll(displayIds: List<Int>): Int {
+    fun resetAll(context: Context, displayIds: List<Int>): Int {
         var last = 0
         val targets = (listOf(null) + displayIds).distinct()
         for (id in targets) {
@@ -64,10 +95,10 @@ object Sh {
             else arrayOf("wm", "size", "reset", "-d", id.toString())
             val denArgs = if (id == null) arrayOf("wm", "density", "reset")
             else arrayOf("wm", "density", "reset", "-d", id.toString())
-            last = run(*sizeArgs)
-            last = run(*denArgs)
+            last = run(context, *sizeArgs)
+            last = run(context, *denArgs)
         }
-        run("settings", "put", "global", "policy_control", "null")
+        run(context, "settings", "put", "global", "policy_control", "null")
         return last
     }
 }

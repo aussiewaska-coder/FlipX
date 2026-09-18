@@ -63,7 +63,7 @@ class DisplayService : Service() {
 
     private fun apply() {
         if (!Sh.granted()) return
-        Sh.applyDesktop(externals())
+        Sh.applyDesktop(this, externals())
     }
 
     private fun startForegroundNotif() {
@@ -75,7 +75,7 @@ class DisplayService : Service() {
         val notif = Notification.Builder(this, channelId)
             .setContentTitle("FlipX watching displays")
             .setContentText("Auto desktop layout on monitor connect")
-            .setSmallIcon(android.R.drawable.stat_sys_data_usb)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
             .build()
         startForeground(1, notif)
     }
