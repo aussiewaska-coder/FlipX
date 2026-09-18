@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.ServiceConnection
 import android.os.IBinder
 import rikka.shizuku.Shizuku
-import rikka.shizuku.UserServiceArgs
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
@@ -47,7 +46,7 @@ object Sh {
                 latch.countDown()
             }
         }
-        val uargs = UserServiceArgs(ComponentName(context.packageName, FlipService::class.java.name))
+        val uargs = Shizuku.UserServiceArgs(ComponentName(context.packageName, FlipService::class.java.name))
             .daemon(false)
             .processNameSuffix("flipx")
             .debuggable(BuildConfig.DEBUG)
