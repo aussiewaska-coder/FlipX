@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.FlipX" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:colorPrimary">@color/flipx_accent</item>
+        <item name="android:colorPrimaryDark">@color/flipx_bg</item>
+        <item name="android:windowBackground">@color/flipx_bg</item>
+        <item name="android:textColorPrimary">@color/flipx_text</item>
+    </style>
+</resources>

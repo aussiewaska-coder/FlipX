@@ -75,7 +75,7 @@ class DisplayService : Service() {
         val notif = Notification.Builder(this, channelId)
             .setContentTitle("FlipX watching displays")
             .setContentText("Auto desktop layout on monitor connect")
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(R.drawable.ic_desktop)
             .build()
         startForeground(1, notif)
     }
