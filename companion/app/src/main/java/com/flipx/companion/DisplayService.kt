@@ -63,7 +63,7 @@ class DisplayService : Service() {
 
     private fun apply() {
         if (!Sh.granted()) return
-        Sh.applyDesktop(this, externals())
+        Sh.applyDesktop(externals())
     }
 
     private fun startForegroundNotif() {

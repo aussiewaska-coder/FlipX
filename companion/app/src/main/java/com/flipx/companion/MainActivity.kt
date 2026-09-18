@@ -88,7 +88,7 @@ class MainActivity : Activity() {
             runOnUiThread { toast("Grant Shizuku first") }
             return
         }
-        val code = Sh.applyDesktop(this, externalIds())
+        val code = Sh.applyDesktop(externalIds())
         runOnUiThread { toast(if (code == 0) "Desktop layout applied" else "Failed ($code)") }
     }
 
@@ -97,7 +97,7 @@ class MainActivity : Activity() {
             runOnUiThread { toast("Grant Shizuku first") }
             return
         }
-        Sh.resetAll(this, allIds())
+        Sh.resetAll(allIds())
         runOnUiThread { toast("Back to native") }
     }
 
