@@ -1,7 +1,8 @@
- name: Build debug APK
+ name: Build companion APK
      on:
        push:
          branches: [main]
+         paths: ["companion/**", ".github/workflows/build.yml"]
        workflow_dispatch:
      jobs:
        build:
@@ -17,11 +18,12 @@
              uses: android-actions/setup-android@v3
            - name: Build debug APK
              uses: gradle/gradle-build-action@v3
-             with: we
+             with:
                gradle-version: 8.7
                arguments: assembleDebug
+               working-directory: companion
            - name: Upload APK
              uses: actions/upload-artifact@v4
              with:
                name: flipx-control-debug
-               path: app/build/outputs/apk/debug/*.apk
+               path: companion/app/build/outputs/apk/debug/*.apk
